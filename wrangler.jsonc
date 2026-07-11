@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cozygamespc",
+  "main": "worker.js",
+  "compatibility_date": "2026-07-10",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".",
+    "not_found_handling": "single-page-application"
+  },
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cozygamespc-db",
+      "database_id": "d5c9d610-c480-4579-8806-9b7adc84b4b3"
+    }
+  ],
+  "r2_buckets": []
+
+  // After creating Cloudflare D1 and R2, replace the empty arrays above with:
+  // "d1_databases": [
+  //   {
+  //     "binding": "DB",
+  //     "database_name": "cozygamespc-db",
+  //     "database_id": "PASTE_YOUR_D1_DATABASE_ID_HERE"
+  //   }
+  // ],
+  // "r2_buckets": [
+  //   {
+  //     "binding": "MEDIA",
+  //     "bucket_name": "cozygamespc-media"
+  //   }
+  // ]
+}
