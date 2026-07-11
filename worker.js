@@ -2,8 +2,8 @@ const STATE_KEY = "main";
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
 const fallbackSiteSettings = {
-  title: "cozygamespc - Free Online Cozy Games for PC and Mobile",
-  description: "Play cozygamespc games online with fast search, helpful categories, tags, and mobile-ready browser gameplay.",
+  title: "Cozy Games PC - Free Online Browser Games | CozyGamesPC",
+  description: "Play cozy games pc favorites at CozyGamesPC. Enjoy free browser games for desktop and mobile, including action, arcade, puzzle, racing, and more.",
   iconImage: "",
   iconText: "CG",
   gameTitlePhrase: "Play Online for Free",
@@ -23,6 +23,14 @@ export default {
       return handleApi(request, env);
     }
 
+    if (url.pathname === "/robots.txt") {
+      return handleRobots(request);
+    }
+
+    if (url.pathname === "/sitemap.xml") {
+      return handleSitemap(request, env);
+    }
+
     if (url.pathname.startsWith("/media/")) {
       return handleMedia(request, env);
     }
@@ -34,6 +42,73 @@ export default {
     return new Response("Static assets binding is not configured.", { status: 500 });
   }
 };
+
+function handleRobots(request) {
+  const origin = new URL(request.url).origin;
+  return new Response(`User-agent: *\nAllow: /\nDisallow: /login\nDisallow: /admin\n\nSitemap: ${origin}/sitemap.xml\n`, {
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "public, max-age=3600"
+    }
+  });
+}
+
+async function handleSitemap(request, env) {
+  const origin = new URL(request.url).origin;
+  const state = publicState(await requireState(request, env));
+  const today = new Date().toISOString().slice(0, 10);
+  const urls = [
+    { loc: "/", priority: "1.0", changefreq: "daily", lastmod: today },
+    { loc: "/new-games", priority: "0.8", changefreq: "daily", lastmod: today },
+    { loc: "/popular-games", priority: "0.8", changefreq: "daily", lastmod: today },
+    { loc: "/recently-played", priority: "0.4", changefreq: "weekly", lastmod: today },
+    { loc: "/tags", priority: "0.7", changefreq: "weekly", lastmod: today }
+  ];
+
+  state.categories.forEach((category) => {
+    if (category.slug) {
+      urls.push({
+        loc: `/category/${category.slug}`,
+        priority: "0.7",
+        changefreq: "weekly",
+        lastmod: today
+      });
+    }
+  });
+
+  getTagSlugs(state).forEach((slug) => {
+    urls.push({
+      loc: `/tags/${slug}`,
+      priority: "0.5",
+      changefreq: "weekly",
+      lastmod: today
+    });
+  });
+
+  state.games.forEach((game) => {
+    if (game.slug) {
+      urls.push({
+        loc: `/${game.slug}`,
+        priority: "0.9",
+        changefreq: "weekly",
+        lastmod: game.published || today
+      });
+    }
+  });
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls
+    .map(
+      (item) => `  <url>\n    <loc>${xmlEscape(origin + item.loc)}</loc>\n    <lastmod>${xmlEscape(item.lastmod)}</lastmod>\n    <changefreq>${xmlEscape(item.changefreq)}</changefreq>\n    <priority>${xmlEscape(item.priority)}</priority>\n  </url>`
+    )
+    .join("\n")}\n</urlset>\n`;
+
+  return new Response(xml, {
+    headers: {
+      "content-type": "application/xml; charset=utf-8",
+      "cache-control": "public, max-age=1800"
+    }
+  });
+}
 
 async function handleApi(request, env) {
   const url = new URL(request.url);
@@ -239,6 +314,16 @@ function normalizeState(source) {
     site: { ...fallbackSiteSettings, ...(state.site || {}) }
   };
 
+  if (next.site.title === "cozygamespc - Free Online Cozy Games for PC and Mobile") {
+    next.site.title = fallbackSiteSettings.title;
+  }
+  if (
+    next.site.description === "Play cozygamespc games online with fast search, helpful categories, tags, and mobile-ready browser gameplay." ||
+    next.site.description === "Play cozygamespc browser games on PC and mobile. Discover action, arcade, puzzle, strategy, racing, and superhero games with fast search and friendly navigation."
+  ) {
+    next.site.description = fallbackSiteSettings.description;
+  }
+
   next.games.forEach((game) => delete game.size);
   next.deletedGames.forEach((game) => delete game.size);
 
@@ -276,6 +361,35 @@ function mergeBySlug(existing, incoming) {
     bySlug.set(item.slug, item);
   });
   return Array.from(bySlug.values());
+}
+
+function getTagSlugs(state) {
+  const tags = new Set();
+  state.games.forEach((game) => {
+    (game.tags || []).forEach((tag) => {
+      const slug = slugify(tag);
+      if (slug) tags.add(slug);
+    });
+  });
+  return Array.from(tags).sort();
+}
+
+function slugify(value) {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function xmlEscape(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
 
 async function readJson(request) {
