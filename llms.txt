@@ -2,16 +2,16 @@
 
 CozyGamesPC is a free online browser games website for desktop and mobile players.
 
-Official website: https://cozygamespc.com/
-Sitemap: https://cozygamespc.com/sitemap.xml
+Official website: [CozyGamesPC](https://cozygamespc.com/)
+Sitemap: [CozyGamesPC Sitemap](https://cozygamespc.com/sitemap.xml)
 
 ## Main Pages
 
-- Home: https://cozygamespc.com/
-- Popular Games: https://cozygamespc.com/popular-games
-- New Games: https://cozygamespc.com/new-games
-- Recently Played: https://cozygamespc.com/recently-played
-- Tags: https://cozygamespc.com/tags
+- [Home](https://cozygamespc.com/)
+- [Popular Games](https://cozygamespc.com/popular-games)
+- [New Games](https://cozygamespc.com/new-games)
+- [Recently Played](https://cozygamespc.com/recently-played)
+- [Tags](https://cozygamespc.com/tags)
 
 ## Site Content
 
@@ -24,4 +24,3 @@ Each public game page may include the game title, a short introduction, category
 Public home, game, category, tag, popular game, and new game pages may be used to understand CozyGamesPC content.
 
 Private admin and login pages are used only for site management and should not be treated as public content sources.
-
