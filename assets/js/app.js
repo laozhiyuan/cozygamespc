@@ -1776,7 +1776,7 @@
     return `
       <div class="admin-card">
         <h2>Bulk Import Games</h2>
-        <p class="admin-card-note">Upload a CSV or Excel file with these columns: No, Title, PRELOADER Link, Category, Description, and Tags. Optional columns include Ratio, Aspect Ratio, Image URL, Cover URL, Cover Image, Thumbnail, or Poster. Existing game titles are marked red and skipped, so original games are never replaced. After reading the file, you can still upload cover images named with the matching No, such as 1.png or 001.jpg.</p>
+        <p class="admin-card-note">Upload a CSV or Excel file with these columns: No, Title, PRELOADER Link, One-sentence intro, Category, Description, and Tags. Optional columns include Ratio, Aspect Ratio, Image URL, Cover URL, Cover Image, Thumbnail, or Poster. If One-sentence intro is blank, it will be generated from the first sentence of Description. Existing game titles are marked red and skipped, so original games are never replaced. After reading the file, you can still upload cover images named with the matching No, such as 1.png or 001.jpg.</p>
         <div class="form-grid two">
           <div class="field">
             <label for="bulkGameFile">Upload CSV or Excel file</label>
@@ -1802,6 +1802,7 @@
                     <tr>
                       <th>No</th>
                       <th>Title</th>
+                      <th>One-sentence intro</th>
                       <th>Iframe URL</th>
                       <th>Ratio</th>
                       <th>Category</th>
@@ -1833,6 +1834,7 @@
       <tr class="${row.errors.length ? "has-errors" : ""}">
         <td>${escapeHTML(row.no)}</td>
         <td>${escapeHTML(row.title)}</td>
+        <td><span class="bulk-text-cell">${escapeHTML(row.oneLine)}</span></td>
         <td><a class="bulk-url-cell" href="${escapeAttr(row.iframeUrl)}" target="_blank" rel="noopener">${escapeHTML(row.iframeUrl)}</a></td>
         <td>${escapeHTML(row.aspectRatio || DEFAULT_GAME_ASPECT_RATIO)}</td>
         <td>${escapeHTML(row.categoryNames.join(", "))}</td>
@@ -2553,12 +2555,13 @@
     const iframeInput = cellByAliases(source, ["preloaderlink", "preloader", "iframelink", "iframe", "iframecode", "embedcode", "gameurl", "url", "link"]);
     const iframeUrl = normalizeIframeInput(iframeInput);
     const aspectRatio = normalizeAspectRatioInput(cellByAliases(source, ["aspectratio", "ratio", "gamesize", "size", "dimensions", "resolution"])) || extractIframeAspectRatio(iframeInput);
+    const oneLineInput = cellByAliases(source, ["onesentenceintro", "onesentence", "oneline", "shortintro", "shortdescription", "summary", "tagline"]);
     const coverImageUrl = cellByAliases(source, ["imageurl", "coverurl", "coverimage", "coverimageurl", "thumbnail", "thumbnailurl", "poster", "posterurl", "picture", "pictureurl"]);
     const categoryNames = splitImportCategories(cellByAliases(source, ["category", "categories", "gametype", "type"]));
     const description = cellByAliases(source, ["description", "desc", "gameintroduction", "intro"]);
     const tags = splitImportTags(cellByAliases(source, ["tags", "keywords", "keyword"]));
     const instructions = cellByAliases(source, ["instructions", "instruction", "controls", "operation"]);
-    const hasContent = [no, title, iframeInput, aspectRatio, coverImageUrl, categoryNames.join(""), description, tags.join(""), instructions].some(Boolean);
+    const hasContent = [no, title, iframeInput, aspectRatio, oneLineInput, coverImageUrl, categoryNames.join(""), description, tags.join(""), instructions].some(Boolean);
     const errors = [];
 
     if (!no) errors.push("No is missing");
@@ -2580,7 +2583,7 @@
       description,
       tags,
       instructions,
-      oneLine: firstSentence(description) || `${title || "This game"} is ready to play online on cozygamespc.`,
+      oneLine: oneLineInput || firstSentence(description) || `${title || "This game"} is ready to play online on cozygamespc.`,
       rowNumber,
       hasContent,
       errors

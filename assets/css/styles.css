@@ -1476,6 +1476,15 @@ body.sidebar-open .tag-count {
   white-space: nowrap;
 }
 
+.bulk-text-cell {
+  display: inline-block;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  white-space: nowrap;
+}
+
 .bulk-preview-cover {
   width: 52px;
   height: 52px;
