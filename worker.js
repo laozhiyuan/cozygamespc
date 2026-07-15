@@ -4,12 +4,17 @@ const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const fallbackSiteSettings = {
   title: "Cozy Games PC - Free Online Browser Games | CozyGamesPC",
   description: "Play cozy games pc favorites at CozyGamesPC. Enjoy free browser games for desktop and mobile, including action, arcade, puzzle, racing, and more.",
+  homeHeadline: "Cozy Games PC: Free Online Games for Desktop and Mobile",
   iconImage: "",
   iconText: "CG",
   gameTitlePhrase: "Play Online for Free",
   gameDescriptionPhraseB: "online for free",
   gameDescriptionPhraseC: "Start playing now on CozyGamesPC"
 };
+
+const fallbackCategories = [
+  { name: "Mobile", slug: "mobile", icon: "smartphone", iconImage: "/assets/img/category-mobile.ico", color: "#34c759" }
+];
 
 export default {
   async fetch(request, env) {
@@ -327,6 +332,12 @@ function normalizeState(source) {
   next.games.forEach((game) => delete game.size);
   next.deletedGames.forEach((game) => delete game.size);
 
+  fallbackCategories.forEach((category) => {
+    if (!next.categories.some((item) => item.slug === category.slug)) {
+      next.categories.push(clone(category));
+    }
+  });
+
   if (!next.users.some((user) => user.username === "admin")) {
     next.users.push({ username: "admin", password: "admin", role: "admin" });
   }
@@ -355,12 +366,21 @@ function mergeCollaboratorState(existing, incoming) {
 }
 
 function mergeBySlug(existing, incoming) {
-  const bySlug = new Map(existing.map((item) => [item.slug, item]));
+  const existingBySlug = new Map(existing.map((item) => [item.slug, item]));
+  const used = new Set();
+  const merged = [];
+
   incoming.forEach((item) => {
     if (!item || !item.slug) return;
-    bySlug.set(item.slug, item);
+    merged.push(item);
+    used.add(item.slug);
   });
-  return Array.from(bySlug.values());
+
+  existingBySlug.forEach((item, slug) => {
+    if (!used.has(slug)) merged.push(item);
+  });
+
+  return merged;
 }
 
 function getTagSlugs(state) {

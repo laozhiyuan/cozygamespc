@@ -13,6 +13,13 @@
       "color": "#af52de"
     },
     {
+      "name": "Mobile",
+      "slug": "mobile",
+      "icon": "smartphone",
+      "iconImage": "/assets/img/category-mobile.ico",
+      "color": "#34c759"
+    },
+    {
       "name": "Fighting",
       "slug": "fighting",
       "icon": "swords",
@@ -548,8 +555,9 @@
   "deletedSeedGames": [],
   "deletedGames": [],
   "site": {
-    "title": "cozygamespc - Free Online Cozy Games for PC and Mobile",
-    "description": "Play cozygamespc games online with fast search, helpful categories, tags, and mobile-ready browser gameplay.",
+    "title": "Cozy Games PC - Free Online Browser Games | CozyGamesPC",
+    "description": "Play cozy games pc favorites at CozyGamesPC. Enjoy free browser games for desktop and mobile, including action, arcade, puzzle, racing, and more.",
+    "homeHeadline": "Cozy Games PC: Free Online Games for Desktop and Mobile",
     "iconImage": "",
     "iconText": "CG",
     "gameTitlePhrase": "Play Online for Free",

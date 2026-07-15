@@ -7,6 +7,9 @@
   const REMOTE_SESSION_KEY = "cozygamespc:remote-session:v1";
   const RECENT_KEY = "cozygamespc:recent:v1";
   const FIRST_GAME_IFRAME = "https://html5.gamemonetize.games/ztnooa2wmbczll7r6hd4kj6vyym4z6x6/";
+  const DEFAULT_OG_ASSET = "assets/img/cozygamespc-og.png";
+  const DEFAULT_OG_IMAGE = `${SITE_URL}/${DEFAULT_OG_ASSET}`;
+  const DEFAULT_GAME_ASPECT_RATIO = "1024 / 512";
   const IS_FILE_PREVIEW = window.location.protocol === "file:";
   const FILE_BASE_PATH = IS_FILE_PREVIEW ? decodeURIComponent(window.location.pathname.replace(/\/[^/]*$/, "/")) : "/";
   const API_ENABLED = !IS_FILE_PREVIEW;
@@ -15,6 +18,7 @@
   const seedCategories = [
     { name: "Action", slug: "action", icon: "zap", color: "#007aff" },
     { name: "Arcade", slug: "arcade", icon: "joystick", color: "#af52de" },
+    { name: "Mobile", slug: "mobile", icon: "smartphone", iconImage: "/assets/img/category-mobile.ico", color: "#34c759" },
     { name: "Fighting", slug: "fighting", icon: "swords", color: "#ff3b30" },
     { name: "Adventure", slug: "adventure", icon: "compass", color: "#34c759" },
     { name: "Puzzle", slug: "puzzle", icon: "puzzle", color: "#ff9500" },
@@ -337,8 +341,9 @@
   ];
 
   const defaultSiteSettings = {
-    title: "cozygamespc - Free Online Cozy Games for PC and Mobile",
-    description: "Play cozygamespc games online with fast search, helpful categories, tags, and mobile-ready browser gameplay.",
+    title: "Cozy Games PC - Free Online Browser Games | CozyGamesPC",
+    description: "Play cozy games pc favorites at CozyGamesPC. Enjoy free browser games for desktop and mobile, including action, arcade, puzzle, racing, and more.",
+    homeHeadline: "Cozy Games PC: Free Online Games for Desktop and Mobile",
     iconImage: "",
     iconText: "CG",
     gameTitlePhrase: "Play Online for Free",
@@ -406,6 +411,16 @@
       deletedGames: Array.isArray(saved.deletedGames) ? saved.deletedGames : [],
       site: { ...defaultSiteSettings, ...(saved.site || {}) }
     };
+
+    if (next.site.title === "cozygamespc - Free Online Cozy Games for PC and Mobile") {
+      next.site.title = defaultSiteSettings.title;
+    }
+    if (
+      next.site.description === "Play cozygamespc games online with fast search, helpful categories, tags, and mobile-ready browser gameplay." ||
+      next.site.description === "Play cozygamespc browser games on PC and mobile. Discover action, arcade, puzzle, strategy, racing, and superhero games with fast search and friendly navigation."
+    ) {
+      next.site.description = defaultSiteSettings.description;
+    }
 
     next.games.forEach((game) => {
       delete game.size;
@@ -693,6 +708,20 @@
     return browserPathFor(page, value);
   }
 
+  function assetPath(path) {
+    const cleanPath = String(path || "").replace(/^\/+/, "");
+    return IS_FILE_PREVIEW ? `${FILE_BASE_PATH}${cleanPath}` : `/${cleanPath}`;
+  }
+
+  function displayImageSrc(src) {
+    const value = String(src || "").trim();
+    if (!value) return "";
+    if (IS_FILE_PREVIEW && value.startsWith("/assets/")) {
+      return `${FILE_BASE_PATH}${value.replace(/^\/+/, "")}`;
+    }
+    return value;
+  }
+
   function navigateTo(page, value, options = {}) {
     const nextPath = browserPathFor(page, value);
     if (options.replace) {
@@ -795,10 +824,11 @@
       title: site.title,
       description: site.description,
       canonical: SITE_URL + "/",
+      image: DEFAULT_OG_IMAGE,
       schema: {
         "@context": "https://schema.org",
         "@type": "WebSite",
-        name: site.title,
+        name: "Cozy Games PC",
         url: SITE_URL + "/",
         potentialAction: {
           "@type": "SearchAction",
@@ -817,6 +847,8 @@
 
     return `
       <div class="page-shell">
+        ${renderHomeIntro()}
+
         ${renderGameSection({
           title: "Recently Played",
           description: recent.length ? "Your latest cozygamespc game sessions." : "Start with the newest games until your local play history grows.",
@@ -825,8 +857,8 @@
         })}
 
         ${renderGameSection({
-          title: "Recommended Games",
-          description: "Sorted by the highest click count across the game library.",
+          title: "Recommended Cozy Games",
+          description: "Popular browser games selected from click activity and player interest.",
           games: popular.slice(0, 10),
           href: hrefFor("popular")
         })}
@@ -834,8 +866,8 @@
         ${renderCategorySection()}
 
         ${renderGameSection({
-          title: "Latest Games",
-          description: "Freshly published games on cozygamespc.",
+          title: "New Browser Games",
+          description: "Freshly published online games on CozyGamesPC.",
           games: latest.slice(0, 10),
           href: hrefFor("latest")
         })}
@@ -851,11 +883,163 @@
           )
           .join("")}
 
+        ${renderHomeSeoContent()}
+
         <div class="footer-actions">
           <button class="primary-button" type="button" data-action="random-game">${icon("shuffle")} Random game</button>
           <button class="secondary-button" type="button" data-action="back-top">${icon("arrow-up")} Back to top</button>
         </div>
       </div>
+    `;
+  }
+
+  function renderHomeIntro() {
+    const site = getSiteSettings();
+    const homeHeadline = site.homeHeadline || defaultSiteSettings.homeHeadline;
+    return `
+      <section class="home-intro" aria-labelledby="home-title">
+        <div class="home-intro-copy">
+          <p class="eyebrow">${icon("sparkles")} Free browser games</p>
+          <h1 id="home-title">${escapeHTML(homeHeadline)}</h1>
+          <p>
+            Cozy Games PC is a fast browser game portal for players who want simple access to free online games without heavy downloads.
+            Explore quick action rounds, arcade challenges, puzzle boards, racing runs, sports games, strategy titles, and mobile-ready
+            games that open directly in your browser.
+          </p>
+          <p>
+            Use search to find a title, browse categories for a specific mood, open the Tags index for themes, or jump into popular games
+            ranked by player clicks. Each game page includes a clear description, categories, tags, and an iframe play area.
+          </p>
+        </div>
+        <img class="home-intro-image" src="${escapeAttr(assetPath(DEFAULT_OG_ASSET))}" alt="Cozy Games PC free online browser games preview" width="1200" height="630" loading="eager">
+      </section>
+    `;
+  }
+
+  function renderHomeSeoContent() {
+    return `
+      <section class="home-seo-copy section-block" aria-labelledby="why-play-title">
+        <div class="seo-copy-grid">
+          <article>
+            <h2 id="why-play-title">Why Play Games on CozyGamesPC?</h2>
+            <p>
+              CozyGamesPC is built for quick discovery. Instead of asking players to install a large client, the site focuses on online games
+              that can be opened from a normal browser. That makes it useful when you want a short arcade round, a focused action game, a
+              relaxing puzzle board, or a mobile-ready game that can be shared with friends.
+            </p>
+            <p>
+              A good game portal should be easy to scan. Cozy Games PC keeps game cards compact, shows a cover or readable initials, and links
+              every title to a dedicated page with the player, description, categories, tags, and related popular games.
+            </p>
+          </article>
+          <article>
+            <h2>Browse Cozy Games PC Categories</h2>
+            <p>
+              Categories help players move from a broad interest to a playable title. Action and arcade pages are useful for fast sessions,
+              puzzle and strategy pages suit more thoughtful play, while racing, shooting, sports, adventure, and fighting pages give each
+              game type a clear path from the homepage.
+            </p>
+            <p>
+              Tags add another layer of discovery. The alphabetical Tags page connects themes such as stickman, superhero, defense, platform,
+              arena, drift, merge, and more, so related games are easier to find even when they sit in different categories.
+            </p>
+          </article>
+          <article>
+            <h2>How to Choose the Right Browser Game</h2>
+            <p>
+              The best game to open depends on how much time you have and which device you are using. Desktop players may prefer games with
+              keyboard movement, aiming, or a wider play field. Mobile players usually benefit from simpler touch controls, readable buttons,
+              and shorter rounds that fit naturally between other tasks.
+            </p>
+            <p>
+              If you want instant energy, start with action, fighting, shooting, racing, or arcade games. If you want slower thinking, explore
+              puzzle, merge, defense, logic, or strategy games. Tags make this choice easier because they describe details that categories alone
+              cannot show, including arena battles, stickman heroes, drift tracks, upgrades, rescue missions, or relaxing boards.
+            </p>
+          </article>
+          <article>
+            <h2>What Makes a Good Online Game Page?</h2>
+            <p>
+              A useful game page should answer basic questions before the player presses play. CozyGamesPC keeps the game title, iframe player,
+              short summary, categories, tags, and release information close together so players can understand the game quickly.
+              Popular games below the player also create a path to the next title without forcing visitors back to the homepage.
+            </p>
+            <p>
+              The site is designed to grow over time. New games can be imported in bulk, categories can be edited, and cover images can be added
+              with external URLs while Cloudflare D1 keeps public game data consistent across browsers. That structure helps the library stay
+              organized as more online games are added.
+            </p>
+          </article>
+          <article>
+            <h2>Desktop and Mobile Play Sessions</h2>
+            <p>
+              Browser games are often played in short sessions, so the interface needs to stay predictable. On desktop, players can scan more
+              cards at once, compare categories, and choose titles that use keyboard controls. On mobile, the same library needs larger touch
+              targets, readable cards, and pages that avoid unnecessary steps before the game frame loads.
+            </p>
+            <p>
+              CozyGamesPC marks whether a game is mobile ready and keeps key game details visible on the game page. That detail helps players decide
+              whether to open a title on a phone, tablet, laptop, or desktop monitor. It also keeps the browsing experience useful for casual
+              players who may switch devices during the day.
+            </p>
+          </article>
+          <article>
+            <h2>Search, Recents, and Library Growth</h2>
+            <p>
+              Search is useful when players already know the title, tag, or category they want. Recently Played helps return visitors reopen games
+              they have tried before, while New Games and Popular Games support discovery for visitors who are not sure what to play next.
+            </p>
+            <p>
+              As the library grows, clear internal links become more important. Category pages, tag pages, and game pages give search engines and
+              players a simple path through the site. The sitemap also lists public pages so new browser games can be discovered after they are
+              added in the admin area.
+            </p>
+          </article>
+        </div>
+        <div class="faq-list" aria-label="CozyGamesPC FAQ">
+          <h2>Frequently Asked Questions</h2>
+          <details open>
+            <summary>Are the games free to play?</summary>
+            <p>The games listed on CozyGamesPC are browser-based games that can be opened directly from their game pages. Some games are hosted by third-party providers inside an iframe.</p>
+          </details>
+          <details>
+            <summary>Can I play on mobile?</summary>
+            <p>Many games are marked mobile ready and work on phones or tablets. Some titles are better on desktop because they use keyboard controls or precise aiming.</p>
+          </details>
+          <details>
+            <summary>How do categories and tags work?</summary>
+            <p>Categories describe the main game type, while tags describe specific themes and mechanics. Together they make the game library easier to browse and search.</p>
+          </details>
+          <details>
+            <summary>Do I need to install anything?</summary>
+            <p>No installation is required for the site itself. Games open in the browser through their game pages, although a stable internet connection and a modern browser will usually give the best experience.</p>
+          </details>
+          <details>
+            <summary>Why do some games feel different from others?</summary>
+            <p>Some games are hosted by different providers and may use different loading screens, save systems, controls, or iframe behavior. The category and tag sections help explain what to expect before playing.</p>
+          </details>
+          <details>
+            <summary>How are popular games ranked?</summary>
+            <p>Popular Games are ordered by click activity. Each time a public visitor opens a game page, the click count can increase, which helps the site surface titles that players choose most often.</p>
+          </details>
+          <details>
+            <summary>Can I search by tag or category?</summary>
+            <p>Yes. The search bar checks game titles, descriptions, tags, and category names, so players can search for broad terms like puzzle or action as well as specific themes.</p>
+          </details>
+          <details>
+            <summary>Will new games appear on the homepage?</summary>
+            <p>Yes. When a game is added through the admin area, it can appear in New Games, its category section, search results, tag pages, and the sitemap used for search engine discovery.</p>
+          </details>
+          <details>
+            <summary>What should I do if a game does not load?</summary>
+            <p>Refresh the page, check your browser connection, and try a different device if the game uses desktop controls. Because some games come from external iframe providers, temporary loading issues can happen outside the main site.</p>
+          </details>
+          <details>
+            <summary>How often should I check for new games?</summary>
+            <p>New titles can be added whenever the library is updated. Checking the New Games page is the fastest way to find recent additions, while category pages are better when you already know the style of game you want.</p>
+          </details>
+        </div>
+      </section>
     `;
   }
 
@@ -921,7 +1105,7 @@
           <div>
             <p class="eyebrow">${icon(category.icon)} Game category</p>
             <h1>${escapeHTML(category.name)} Games</h1>
-            <p>Browse ${escapeHTML(category.name.toLowerCase())} games from the cozygamespc library. Each card opens a full game page with iframe play, details, tags, and instructions.</p>
+            <p>Browse ${escapeHTML(category.name.toLowerCase())} games from the cozygamespc library. Each card opens a full game page with iframe play, details, categories, and tags.</p>
           </div>
           <a class="secondary-button" href="${hrefFor("home")}">${icon("home")} Home</a>
         </section>
@@ -1112,7 +1296,7 @@
               </div>
               ${
                 game.iframeUrl
-                  ? `<div class="iframe-wrap" id="gameFrameWrap"><iframe src="${escapeAttr(game.iframeUrl)}" title="${escapeAttr(game.title)} online game iframe" width="1024" height="512" loading="lazy" allow="fullscreen; autoplay; gamepad; clipboard-read; clipboard-write" allowfullscreen></iframe></div>`
+                  ? `<div class="iframe-wrap" id="gameFrameWrap" style="--game-aspect-ratio:${escapeAttr(gameAspectRatio(game))}"><iframe src="${escapeAttr(game.iframeUrl)}" title="${escapeAttr(game.title)} online game iframe" loading="lazy" allow="fullscreen; autoplay; gamepad; clipboard-read; clipboard-write" allowfullscreen></iframe></div>`
                   : `<div class="iframe-placeholder"><div><h2>Iframe coming soon</h2><p>This sample game page is ready for your iframe URL. Add one in the admin dashboard when the game is live.</p></div></div>`
               }
             </section>
@@ -1120,11 +1304,6 @@
             <section class="content-panel">
               <h2>About ${escapeHTML(game.title)}</h2>
               <p>${escapeHTML(game.description)}</p>
-            </section>
-
-            <section class="content-panel">
-              <h2>Instructions</h2>
-              <p>${escapeHTML(game.instructions)}</p>
             </section>
 
             ${renderPopularGamesSection(popularGames)}
@@ -1139,9 +1318,6 @@
               <dl class="detail-list">
                 <div class="detail-row"><dt>Mobile Ready</dt><dd>${game.mobileReady ? "Yes" : "No"}</dd></div>
                 <div class="detail-row"><dt>Released</dt><dd>${formatDate(game.published)}</dd></div>
-                <div class="detail-row"><dt>Game engine</dt><dd>Externally hosted iframe</dd></div>
-                <div class="detail-row"><dt>Platforms</dt><dd>${game.mobileReady ? "Browser desktop, mobile, tablet" : "Browser desktop"}</dd></div>
-                <div class="detail-row"><dt>Orientation</dt><dd>Landscape</dd></div>
                 <div class="detail-row"><dt>Clicks</dt><dd>${formatNumber(game.clicks || 0)}</dd></div>
                 <div class="detail-row"><dt>Category</dt><dd><div class="pill-list">${categoryNames.map((category) => `<a class="pill" href="${hrefFor("category", category.slug)}">${escapeHTML(category.name)}</a>`).join("")}</div></dd></div>
                 <div class="detail-row"><dt>Tags</dt><dd><div class="pill-list">${game.tags.map((tag) => `<a class="pill" href="${hrefFor("tag", slugify(tag))}">${escapeHTML(tag)}</a>`).join("")}</div></dd></div>
@@ -1304,6 +1480,10 @@
             <label for="siteDescription">Website description</label>
             <textarea id="siteDescription" name="description" required>${escapeHTML(site.description)}</textarea>
           </div>
+          <div class="field">
+            <label for="homeHeadline">Homepage H1 title</label>
+            <input id="homeHeadline" name="homeHeadline" type="text" value="${escapeAttr(site.homeHeadline || defaultSiteSettings.homeHeadline)}" required>
+          </div>
           <div class="admin-card-note">
             Game page SEO template: [Game Title] | [A] | CozyGamesPC. Description: Play [Game Title] [B]. [First sentence from the game description, up to 60 words]! [C]
           </div>
@@ -1329,7 +1509,7 @@
               <input id="siteIconUrl" name="iconImageUrl" type="url" value="${isInlineImage(site.iconImage) ? "" : escapeAttr(site.iconImage || "")}" placeholder="https://example.com/icon.png">
             </div>
             <div class="upload-preview site-icon-preview" id="siteIconPreview">
-              ${site.iconImage ? `<img src="${escapeAttr(site.iconImage)}" alt="">` : `<span>${escapeHTML(site.iconText || "CG")}</span>`}
+              ${site.iconImage ? `<img src="${escapeAttr(displayImageSrc(site.iconImage))}" alt="">` : `<span>${escapeHTML(site.iconText || "CG")}</span>`}
             </div>
           </div>
           <div class="form-actions">
@@ -1369,7 +1549,7 @@
               <input id="categoryIconImageUrl" name="iconImage" type="url" value="${isInlineImage(formCategory.iconImage) ? "" : escapeAttr(formCategory.iconImage || "")}" placeholder="https://example.com/category.png">
             </div>
             <div class="upload-preview category-preview" id="categoryIconPreview">
-              ${formCategory.iconImage ? `<img src="${escapeAttr(formCategory.iconImage)}" alt="">` : categoryIconMarkup(formCategory)}
+              ${formCategory.iconImage ? `<img src="${escapeAttr(displayImageSrc(formCategory.iconImage))}" alt="">` : categoryIconMarkup(formCategory)}
             </div>
           </div>
           <div class="field">
@@ -1408,6 +1588,9 @@
                     </div>
                   </div>
                   <div class="admin-row-actions">
+                    <button class="secondary-button" type="button" data-action="category-top" data-slug="${escapeAttr(category.slug)}" title="Move to top" aria-label="Move ${escapeAttr(category.name)} to top">${icon("chevrons-up")} Top</button>
+                    <button class="secondary-button" type="button" data-action="category-up" data-slug="${escapeAttr(category.slug)}" title="Move up" aria-label="Move ${escapeAttr(category.name)} up">${icon("arrow-up")}</button>
+                    <button class="secondary-button" type="button" data-action="category-down" data-slug="${escapeAttr(category.slug)}" title="Move down" aria-label="Move ${escapeAttr(category.name)} down">${icon("arrow-down")}</button>
                     <button class="secondary-button" type="button" data-action="edit-category" data-slug="${escapeAttr(category.slug)}">${icon("pencil")} Edit</button>
                     ${user.role === "admin" ? `<button class="danger-button" type="button" data-action="delete-category" data-slug="${escapeAttr(category.slug)}">${icon("trash-2")} Delete</button>` : ""}
                   </div>
@@ -1432,8 +1615,7 @@
       categories: [],
       tags: [],
       description: "",
-      instructions: "",
-      initials: "",
+      aspectRatio: "",
       coverImage: ""
     };
 
@@ -1449,9 +1631,13 @@
               <input id="gameTitle" name="title" type="text" value="${escapeAttr(game.title)}" required>
             </div>
             <div class="field">
-              <label for="gameIframe">Iframe URL</label>
-              <input id="gameIframe" name="iframeUrl" type="url" value="${escapeAttr(game.iframeUrl || "")}">
+              <label for="gameIframe">Iframe URL or iframe code</label>
+              <textarea id="gameIframe" name="iframeUrl" placeholder='https://example.com/game or <iframe src="https://example.com/game"></iframe>'>${escapeHTML(game.iframeUrl || "")}</textarea>
             </div>
+          </div>
+          <div class="field">
+            <label for="gameAspectRatio">Game window ratio</label>
+            <input id="gameAspectRatio" name="aspectRatio" type="text" value="${escapeAttr(game.aspectRatio || "")}" placeholder="Optional: 16:9, 4:3, 1024x512. Leave blank for 1024x512.">
           </div>
           <div class="field">
             <label for="gameOneLine">One-sentence intro</label>
@@ -1470,10 +1656,6 @@
               <label for="gameTags">Tags</label>
               <input id="gameTags" name="tags" type="text" value="${escapeAttr((game.tags || []).join(", "))}" placeholder="Arena, Fighting, Stickman, Superhero" required>
               <label class="checkbox-field"><input name="mobileReady" type="checkbox" ${game.mobileReady !== false ? "checked" : ""}> Mobile Ready</label>
-              <div class="field">
-                <label for="gameInitials">Card initials</label>
-                <input id="gameInitials" name="initials" type="text" maxlength="3" value="${escapeAttr(game.initials || "")}" placeholder="SW">
-              </div>
             </div>
           </div>
           <div class="form-grid two">
@@ -1484,16 +1666,12 @@
               <input id="gameCoverImageUrl" name="coverImageUrl" type="url" value="${isInlineImage(game.coverImage) ? "" : escapeAttr(game.coverImage || "")}" placeholder="https://example.com/game-cover.jpg">
             </div>
             <div class="upload-preview cover-preview" id="gameCoverPreview">
-              ${game.coverImage ? `<img src="${escapeAttr(game.coverImage)}" alt="">` : `<span>${icon("image")} Cover preview</span>`}
+              ${game.coverImage ? `<img src="${escapeAttr(displayImageSrc(game.coverImage))}" alt="">` : `<span>${icon("image")} Cover preview</span>`}
             </div>
           </div>
           <div class="field">
             <label for="gameDescription">Game description</label>
             <textarea id="gameDescription" name="description" required>${escapeHTML(game.description || "")}</textarea>
-          </div>
-          <div class="field">
-            <label for="gameInstructions">Instructions</label>
-            <textarea id="gameInstructions" name="instructions" required>${escapeHTML(game.instructions || "")}</textarea>
           </div>
           <div class="form-actions">
             <button class="primary-button" type="submit">${icon("save")} ${editing ? "Save game" : "Add game page"}</button>
@@ -1523,7 +1701,7 @@
                 <div class="admin-list-item">
                   <div class="admin-list-main">
                     ${user.role === "admin" ? `<input class="admin-select" type="checkbox" name="selectedGame" value="${escapeAttr(item.slug)}" aria-label="Select ${escapeAttr(item.title)}">` : ""}
-                    <div class="admin-thumb">${item.coverImage ? `<img src="${escapeAttr(item.coverImage)}" alt="">` : `<span>${escapeHTML(getInitials(item))}</span>`}</div>
+                    <div class="admin-thumb">${item.coverImage ? `<img src="${escapeAttr(displayImageSrc(item.coverImage))}" alt="">` : `<span>${escapeHTML(getInitials(item))}</span>`}</div>
                     <div>
                       <strong>${escapeHTML(item.title)}</strong>
                       <span>${escapeHTML(item.categories.map((slug) => findCategory(slug)?.name || slug).join(", "))} - ${formatDate(item.published)} - Clicks: ${formatNumber(item.clicks || 0)}</span>
@@ -1564,7 +1742,7 @@
                             <div class="admin-list-item">
                               <div class="admin-list-main">
                                 <input class="admin-select" type="checkbox" name="selectedDeletedGame" value="${escapeAttr(item.slug)}" aria-label="Select deleted ${escapeAttr(item.title)}">
-                                <div class="admin-thumb">${item.coverImage ? `<img src="${escapeAttr(item.coverImage)}" alt="">` : `<span>${escapeHTML(getInitials(item))}</span>`}</div>
+                                <div class="admin-thumb">${item.coverImage ? `<img src="${escapeAttr(displayImageSrc(item.coverImage))}" alt="">` : `<span>${escapeHTML(getInitials(item))}</span>`}</div>
                                 <div>
                                   <strong>${escapeHTML(item.title)}</strong>
                                   <span>Deleted ${formatDate(item.deletedAt || new Date().toISOString().slice(0, 10))}</span>
@@ -1598,7 +1776,7 @@
     return `
       <div class="admin-card">
         <h2>Bulk Import Games</h2>
-        <p class="admin-card-note">Upload a CSV or Excel file with these columns: No, Title, PRELOADER Link, Category, Description, Tags, Instructions. Optional cover columns are Image URL, Cover URL, Cover Image, Thumbnail, or Poster. Existing game titles are marked red and skipped, so original games are never replaced. After reading the file, you can still upload cover images named with the matching No, such as 1.png or 001.jpg.</p>
+        <p class="admin-card-note">Upload a CSV or Excel file with these columns: No, Title, PRELOADER Link, Category, Description, and Tags. Optional columns include Ratio, Aspect Ratio, Image URL, Cover URL, Cover Image, Thumbnail, or Poster. Existing game titles are marked red and skipped, so original games are never replaced. After reading the file, you can still upload cover images named with the matching No, such as 1.png or 001.jpg.</p>
         <div class="form-grid two">
           <div class="field">
             <label for="bulkGameFile">Upload CSV or Excel file</label>
@@ -1625,6 +1803,7 @@
                       <th>No</th>
                       <th>Title</th>
                       <th>Iframe URL</th>
+                      <th>Ratio</th>
                       <th>Category</th>
                       <th>Tags</th>
                       <th>Cover</th>
@@ -1655,9 +1834,10 @@
         <td>${escapeHTML(row.no)}</td>
         <td>${escapeHTML(row.title)}</td>
         <td><a class="bulk-url-cell" href="${escapeAttr(row.iframeUrl)}" target="_blank" rel="noopener">${escapeHTML(row.iframeUrl)}</a></td>
+        <td>${escapeHTML(row.aspectRatio || DEFAULT_GAME_ASPECT_RATIO)}</td>
         <td>${escapeHTML(row.categoryNames.join(", "))}</td>
         <td>${escapeHTML(row.tags.join(", "))}</td>
-        <td>${image ? `<img class="bulk-preview-cover" src="${escapeAttr(image)}" alt="">` : `<span class="bulk-no-cover">No image</span>`}</td>
+        <td>${image ? `<img class="bulk-preview-cover" src="${escapeAttr(displayImageSrc(image))}" alt="">` : `<span class="bulk-no-cover">No image</span>`}</td>
         <td>${row.errors.length ? escapeHTML(row.errors.join("; ")) : "Ready"}</td>
       </tr>
     `;
@@ -1845,14 +2025,14 @@
     const color = category.color || "#007aff";
     return `
       <span class="category-icon" style="--category-color:${escapeAttr(color)}; --category-bg:${escapeAttr(hexToSoftBg(color))}">
-        ${category.iconImage ? `<img src="${escapeAttr(category.iconImage)}" alt="">` : icon(category.icon || "gamepad-2")}
+        ${category.iconImage ? `<img src="${escapeAttr(displayImageSrc(category.iconImage))}" alt="">` : icon(category.icon || "gamepad-2")}
       </span>
     `;
   }
 
   function posterContent(game) {
     if (game.coverImage) {
-      return `<img class="poster-image" src="${escapeAttr(game.coverImage)}" alt="${escapeAttr(game.title)} cover">`;
+      return `<img class="poster-image" src="${escapeAttr(displayImageSrc(game.coverImage))}" alt="${escapeAttr(game.title)} cover">`;
     }
     return `<span class="poster-initials">${escapeHTML(getInitials(game))}</span>`;
   }
@@ -1875,7 +2055,7 @@
       .map(
         (category) => `
           <a class="nav-link" href="${hrefFor("category", category.slug)}" data-nav="category:${category.slug}">
-            <span class="nav-icon">${category.iconImage ? `<img class="nav-image-icon" src="${escapeAttr(category.iconImage)}" alt="">` : icon(category.icon || "gamepad-2")}</span>
+            <span class="nav-icon">${category.iconImage ? `<img class="nav-image-icon" src="${escapeAttr(displayImageSrc(category.iconImage))}" alt="">` : icon(category.icon || "gamepad-2")}</span>
             <span class="nav-text">${escapeHTML(category.name)}</span>
           </a>
         `
@@ -1899,7 +2079,7 @@
       .map(
         (category) => `
           <a class="quick-category" href="${hrefFor("category", category.slug)}">
-            ${category.iconImage ? `<img class="quick-image-icon" src="${escapeAttr(category.iconImage)}" alt="">` : icon(category.icon || "gamepad-2")}
+            ${category.iconImage ? `<img class="quick-image-icon" src="${escapeAttr(displayImageSrc(category.iconImage))}" alt="">` : icon(category.icon || "gamepad-2")}
             <span>${escapeHTML(category.name)}</span>
           </a>
         `
@@ -1917,7 +2097,7 @@
       const mark = brand.querySelector(".brand-mark");
       if (mark) {
         mark.innerHTML = site.iconImage
-          ? `<img class="brand-icon-image" src="${escapeAttr(site.iconImage)}" alt="">`
+          ? `<img class="brand-icon-image" src="${escapeAttr(displayImageSrc(site.iconImage))}" alt="">`
           : `<span class="brand-mark-inner">${escapeHTML(site.iconText || "CG")}</span>`;
       }
     }
@@ -2015,6 +2195,15 @@
       }
       if (action === "push-browser-cache") {
         pushBrowserDataToCloud();
+      }
+      if (action === "category-top") {
+        moveCategory(actionTarget.getAttribute("data-slug"), "top");
+      }
+      if (action === "category-up") {
+        moveCategory(actionTarget.getAttribute("data-slug"), "up");
+      }
+      if (action === "category-down") {
+        moveCategory(actionTarget.getAttribute("data-slug"), "down");
       }
       if (action === "delete-category") {
         deleteCategory(actionTarget.getAttribute("data-slug"));
@@ -2361,28 +2550,31 @@
   function normalizeBulkGameRow(source, rowNumber) {
     const no = cellByAliases(source, ["no", "number", "id"]);
     const title = cellByAliases(source, ["title", "gametitle", "name"]);
-    const iframeUrl = cellByAliases(source, ["preloaderlink", "preloader", "iframelink", "iframe", "gameurl", "url", "link"]);
+    const iframeInput = cellByAliases(source, ["preloaderlink", "preloader", "iframelink", "iframe", "iframecode", "embedcode", "gameurl", "url", "link"]);
+    const iframeUrl = normalizeIframeInput(iframeInput);
+    const aspectRatio = normalizeAspectRatioInput(cellByAliases(source, ["aspectratio", "ratio", "gamesize", "size", "dimensions", "resolution"])) || extractIframeAspectRatio(iframeInput);
     const coverImageUrl = cellByAliases(source, ["imageurl", "coverurl", "coverimage", "coverimageurl", "thumbnail", "thumbnailurl", "poster", "posterurl", "picture", "pictureurl"]);
     const categoryNames = splitImportCategories(cellByAliases(source, ["category", "categories", "gametype", "type"]));
     const description = cellByAliases(source, ["description", "desc", "gameintroduction", "intro"]);
     const tags = splitImportTags(cellByAliases(source, ["tags", "keywords", "keyword"]));
     const instructions = cellByAliases(source, ["instructions", "instruction", "controls", "operation"]);
-    const hasContent = [no, title, iframeUrl, coverImageUrl, categoryNames.join(""), description, tags.join(""), instructions].some(Boolean);
+    const hasContent = [no, title, iframeInput, aspectRatio, coverImageUrl, categoryNames.join(""), description, tags.join(""), instructions].some(Boolean);
     const errors = [];
 
     if (!no) errors.push("No is missing");
     if (!title) errors.push("Title is missing");
     if (!iframeUrl) errors.push("PRELOADER Link is missing");
+    if (iframeInput && !iframeUrl) errors.push("PRELOADER Link must be an http/https URL or iframe code with src");
     if (!categoryNames.length) errors.push("Category is missing");
     if (!description) errors.push("Description is missing");
     if (!tags.length) errors.push("Tags are missing");
-    if (!instructions) errors.push("Instructions are missing");
     if (coverImageUrl && !isImportImageUrl(coverImageUrl)) errors.push("Image URL must start with http:// or https://");
 
     return {
       no,
       title,
       iframeUrl,
+      aspectRatio,
       coverImageUrl,
       categoryNames,
       description,
@@ -2424,6 +2616,82 @@
 
   function isImportImageUrl(value) {
     return /^https?:\/\//i.test(String(value || "").trim());
+  }
+
+  function normalizeIframeInput(value) {
+    const text = decodeHTMLValue(String(value || "").trim());
+    if (!text) return "";
+    const directUrl = normalizeURLCandidate(text);
+    if (directUrl) return directUrl;
+
+    const src = extractIframeAttribute(text, "src") || extractIframeAttribute(text, "data-src");
+    return normalizeURLCandidate(src);
+  }
+
+  function extractIframeAspectRatio(value) {
+    const text = decodeHTMLValue(String(value || "").trim());
+    if (!/<iframe[\s>]/i.test(text)) return "";
+    const width = parseDimensionNumber(extractIframeAttribute(text, "width"));
+    const height = parseDimensionNumber(extractIframeAttribute(text, "height"));
+    return normalizeAspectPair(width, height);
+  }
+
+  function normalizeAspectRatioInput(value) {
+    const text = decodeHTMLValue(String(value || ""))
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+    if (!text) return "";
+
+    const pair = text.match(/(\d+(?:\.\d+)?)\s*(?:x|×|by|:|\/)\s*(\d+(?:\.\d+)?)/i);
+    if (pair) return normalizeAspectPair(Number(pair[1]), Number(pair[2]));
+
+    const decimal = text.match(/^(\d+(?:\.\d+)?)$/);
+    if (decimal) return normalizeAspectPair(Number(decimal[1]), 1);
+
+    return "";
+  }
+
+  function parseDimensionNumber(value) {
+    const text = String(value || "").trim();
+    if (!text || /%/.test(text)) return 0;
+    const match = text.match(/^(\d+(?:\.\d+)?)/);
+    return match ? Number(match[1]) : 0;
+  }
+
+  function normalizeAspectPair(width, height) {
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return "";
+    return `${formatRatioNumber(width)} / ${formatRatioNumber(height)}`;
+  }
+
+  function formatRatioNumber(value) {
+    return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(4)));
+  }
+
+  function normalizeURLCandidate(value) {
+    const text = String(value || "").trim();
+    if (/^https?:\/\//i.test(text)) return text;
+    if (/^\/\//.test(text)) return `https:${text}`;
+    return "";
+  }
+
+  function extractIframeAttribute(markup, attribute) {
+    const pattern = new RegExp(`(?:^|[\\s<])${escapeRegExp(attribute)}\\s*=\\s*(?:"([^"]+)"|'([^']+)'|([^\\s>]+))`, "i");
+    const match = String(markup || "").match(pattern);
+    return decodeHTMLValue((match && (match[1] || match[2] || match[3])) || "").trim();
+  }
+
+  function escapeRegExp(value) {
+    return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function decodeHTMLValue(value) {
+    return String(value || "")
+      .replace(/&amp;/g, "&")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">");
   }
 
   function cellByAliases(row, aliases) {
@@ -2533,6 +2801,29 @@
     button.classList.add("is-active");
   }
 
+  function moveCategory(slug, direction) {
+    const user = getCurrentUser();
+    if (!user) {
+      toast("Please log in first.");
+      return;
+    }
+
+    const index = state.categories.findIndex((category) => category.slug === slug);
+    if (index < 0) return;
+
+    let targetIndex = index;
+    if (direction === "top") targetIndex = 0;
+    if (direction === "up") targetIndex = Math.max(0, index - 1);
+    if (direction === "down") targetIndex = Math.min(state.categories.length - 1, index + 1);
+    if (targetIndex === index) return;
+
+    const [category] = state.categories.splice(index, 1);
+    state.categories.splice(targetIndex, 0, category);
+    saveState();
+    toast("Category order updated.");
+    render();
+  }
+
   function toggleListSelection(input) {
     const list = document.getElementById(input.getAttribute("data-target-list"));
     if (!list) return;
@@ -2587,6 +2878,7 @@
         importNo: row.no,
         oneLine: row.oneLine,
         iframeUrl: row.iframeUrl,
+        aspectRatio: row.aspectRatio,
         mobileReady: true,
         categories: categorySlugs,
         tags: row.tags,
@@ -2707,6 +2999,7 @@
     const data = new FormData(form);
     const title = String(data.get("title") || "").trim();
     const description = String(data.get("description") || "").trim();
+    const homeHeadline = String(data.get("homeHeadline") || "").trim() || defaultSiteSettings.homeHeadline;
     const iconImage = String(data.get("iconImageUrl") || data.get("iconImageData") || "").trim();
     const gameTitlePhrase = String(data.get("gameTitlePhrase") || "").trim();
     const gameDescriptionPhraseB = String(data.get("gameDescriptionPhraseB") || "").trim();
@@ -2721,6 +3014,7 @@
       ...getSiteSettings(),
       title,
       description,
+      homeHeadline,
       iconImage,
       gameTitlePhrase,
       gameDescriptionPhraseB,
@@ -2782,16 +3076,21 @@
     const existingSlug = String(data.get("existingSlug") || "");
     const title = String(data.get("title") || "").trim();
     const oneLine = String(data.get("oneLine") || "").trim();
-    const iframeUrl = String(data.get("iframeUrl") || "").trim();
+    const iframeInput = String(data.get("iframeUrl") || "").trim();
+    const iframeUrl = normalizeIframeInput(iframeInput);
+    const aspectRatio = normalizeAspectRatioInput(String(data.get("aspectRatio") || "")) || extractIframeAspectRatio(iframeInput);
     const tags = splitList(String(data.get("tags") || ""));
     const description = String(data.get("description") || "").trim();
-    const instructions = String(data.get("instructions") || "").trim();
-    const initials = String(data.get("initials") || "").trim().toUpperCase();
     const coverImage = String(data.get("coverImageUrl") || data.get("coverImageData") || "").trim();
     const categories = Array.from(form.elements.categories.selectedOptions).map((option) => option.value);
 
-    if (!title || !oneLine || !tags.length || !description || !instructions || !categories.length) {
+    if (!title || !oneLine || !tags.length || !description || !categories.length) {
       toast("Please complete the required game fields.");
+      return;
+    }
+
+    if (iframeInput && !iframeUrl) {
+      toast("Please enter a valid iframe URL or iframe code with an http/https src.");
       return;
     }
 
@@ -2804,12 +3103,11 @@
       game.title = title;
       game.oneLine = oneLine;
       game.iframeUrl = iframeUrl;
+      game.aspectRatio = aspectRatio;
       game.mobileReady = Boolean(data.get("mobileReady"));
       game.categories = categories;
       game.tags = tags;
       game.description = description;
-      game.instructions = instructions;
-      game.initials = initials || getInitials({ title });
       game.coverImage = coverImage;
       saveState();
       toast("Game updated.");
@@ -2824,14 +3122,14 @@
       slug,
       oneLine,
       iframeUrl,
+      aspectRatio,
       mobileReady: Boolean(data.get("mobileReady")),
       categories,
       tags,
       description,
-      instructions,
       published: new Date().toISOString().slice(0, 10),
       clicks: 0,
-      initials: initials || getInitials({ title }),
+      initials: getInitials({ title }),
       poster: colors,
       coverImage
     });
@@ -3281,12 +3579,21 @@
   }
 
   function setMeta(options) {
+    const image = options.image || DEFAULT_OG_IMAGE;
     document.title = options.title;
     setMetaContent("description", options.description);
     setMetaContent("robots", options.noindex ? "noindex,nofollow" : "index,follow");
+    setMetaContent("twitter:card", "summary_large_image");
+    setMetaContent("twitter:title", options.title);
+    setMetaContent("twitter:description", options.description);
+    setMetaContent("twitter:image", image);
+    setPropertyContent("og:type", options.type || "website");
     setPropertyContent("og:title", options.title);
     setPropertyContent("og:description", options.description);
     setPropertyContent("og:url", options.canonical);
+    setPropertyContent("og:image", image);
+    setPropertyContent("og:image:width", "1200");
+    setPropertyContent("og:image:height", "630");
 
     const canonical = document.querySelector('link[rel="canonical"]');
     if (canonical) canonical.setAttribute("href", options.canonical);
@@ -3314,17 +3621,27 @@
       favicon.setAttribute("rel", "icon");
       document.head.appendChild(favicon);
     }
-    favicon.setAttribute("href", iconImage || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23007aff'/%3E%3Ctext x='32' y='39' text-anchor='middle' font-size='22' font-family='Arial' font-weight='800' fill='white'%3ECG%3C/text%3E%3C/svg%3E");
+    favicon.setAttribute("href", iconImage ? displayImageSrc(iconImage) : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23007aff'/%3E%3Ctext x='32' y='39' text-anchor='middle' font-size='22' font-family='Arial' font-weight='800' fill='white'%3ECG%3C/text%3E%3C/svg%3E");
   }
 
   function setMetaContent(name, value) {
-    const meta = document.querySelector(`meta[name="${name}"]`);
-    if (meta) meta.setAttribute("content", value);
+    let meta = document.querySelector(`meta[name="${name}"]`);
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("name", name);
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", value);
   }
 
   function setPropertyContent(property, value) {
-    const meta = document.querySelector(`meta[property="${property}"]`);
-    if (meta) meta.setAttribute("content", value);
+    let meta = document.querySelector(`meta[property="${property}"]`);
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("property", property);
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", value);
   }
 
   function emptyState(title, message) {
@@ -3349,6 +3666,10 @@
   function posterStyle(game) {
     const colors = Array.isArray(game.poster) && game.poster.length >= 2 ? game.poster : colorPairFromString(game.title);
     return `--poster-a:${escapeAttr(colors[0])}; --poster-b:${escapeAttr(colors[1])};`;
+  }
+
+  function gameAspectRatio(game) {
+    return normalizeAspectRatioInput(game?.aspectRatio || "") || DEFAULT_GAME_ASPECT_RATIO;
   }
 
   function colorPairFromString(value) {
