@@ -110,7 +110,7 @@ async function handleSitemap(request, env) {
   return new Response(xml, {
     headers: {
       "content-type": "application/xml; charset=utf-8",
-      "cache-control": "public, max-age=1800"
+      "cache-control": "public, max-age=300"
     }
   });
 }
