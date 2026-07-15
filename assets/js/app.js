@@ -12,6 +12,12 @@
   const DEFAULT_OG_IMAGE = `${SITE_URL}/${DEFAULT_OG_ASSET}`;
   const DEFAULT_GAME_ASPECT_RATIO = "1024 / 512";
   const SHEETJS_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+  const DEFAULT_IFRAME_PERMISSIONS = {
+    allowAutoRedirect: false,
+    allowPopups: true,
+    allowFullscreen: false,
+    allowClickRedirect: false
+  };
   const IS_FILE_PREVIEW = window.location.protocol === "file:";
   const FILE_BASE_PATH = IS_FILE_PREVIEW ? decodeURIComponent(window.location.pathname.replace(/\/[^/]*$/, "/")) : "/";
   const API_ENABLED = !IS_FILE_PREVIEW;
@@ -372,6 +378,10 @@
   const searchResults = document.getElementById("searchResults");
   const quickCategories = document.getElementById("quickCategories");
 
+  if ("scrollRestoration" in window.history) {
+    window.history.scrollRestoration = "manual";
+  }
+
   document.addEventListener("click", handleDocumentClick);
   document.addEventListener("submit", handleSubmit);
   document.addEventListener("change", handleChange);
@@ -425,12 +435,8 @@
       next.site.description = defaultSiteSettings.description;
     }
 
-    next.games.forEach((game) => {
-      delete game.size;
-    });
-    next.deletedGames.forEach((game) => {
-      delete game.size;
-    });
+    next.games.forEach(normalizeGameRecord);
+    next.deletedGames.forEach(normalizeGameRecord);
 
     seedCategories.forEach((category) => {
       if (!next.categories.some((item) => item.slug === category.slug)) {
@@ -441,7 +447,9 @@
     seedGames.forEach((game) => {
       const isDeleted = next.deletedSeedGames.includes(game.slug) || next.deletedGames.some((item) => item.slug === game.slug);
       if (!isDeleted && !next.games.some((item) => item.slug === game.slug)) {
-        next.games.push(clone(game));
+        const clonedGame = clone(game);
+        normalizeGameRecord(clonedGame);
+        next.games.push(clonedGame);
       }
     });
 
@@ -614,8 +622,26 @@
     }
 
     if (routeChanged) {
-      window.scrollTo({ top: 0 });
+      scrollToPageTop();
     }
+  }
+
+  function scrollToPageTop() {
+    const reset = () => {
+      const scroller = document.scrollingElement || document.documentElement;
+      if (scroller) scroller.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      window.scrollTo(0, 0);
+    };
+    const previousBehavior = document.documentElement.style.scrollBehavior;
+    document.documentElement.style.scrollBehavior = "auto";
+    reset();
+    window.requestAnimationFrame(reset);
+    [40, 120, 260, 520, 900, 1400].forEach((delay) => window.setTimeout(reset, delay));
+    window.setTimeout(() => {
+      document.documentElement.style.scrollBehavior = previousBehavior;
+    }, 1500);
   }
 
   function parseRoute() {
@@ -732,6 +758,7 @@
     } else {
       window.history.pushState({}, "", nextPath);
     }
+    scrollToPageTop();
     render();
   }
 
@@ -1299,7 +1326,7 @@
               </div>
               ${
                 game.iframeUrl
-                  ? `<div class="iframe-wrap" id="gameFrameWrap" style="--game-aspect-ratio:${escapeAttr(gameAspectRatio(game))}"><iframe src="${escapeAttr(game.iframeUrl)}" title="${escapeAttr(game.title)} online game iframe" loading="eager" ${iframePolicyAttributes(game)}></iframe></div>`
+                  ? `<div class="iframe-wrap" id="gameFrameWrap" style="--game-aspect-ratio:${escapeAttr(gameAspectRatio(game))}"><iframe src="${escapeAttr(normalizeProviderIframeUrl(game.iframeUrl))}" title="${escapeAttr(game.title)} online game iframe" loading="eager" ${iframePolicyAttributes(game)}></iframe></div>`
                   : `<div class="iframe-placeholder"><div><h2>Iframe coming soon</h2><p>This sample game page is ready for your iframe URL. Add one in the admin dashboard when the game is live.</p></div></div>`
               }
             </section>
@@ -1615,13 +1642,14 @@
       oneLine: "",
       iframeUrl: "",
       mobileReady: true,
-      strictIframe: true,
+      iframePermissions: { ...DEFAULT_IFRAME_PERMISSIONS },
       categories: [],
       tags: [],
       description: "",
       aspectRatio: "",
       coverImage: ""
     };
+    const iframePermissions = normalizeIframePermissions(game);
 
     return `
       <div class="admin-card">
@@ -1660,8 +1688,14 @@
               <label for="gameTags">Tags</label>
               <input id="gameTags" name="tags" type="text" value="${escapeAttr((game.tags || []).join(", "))}" placeholder="Arena, Fighting, Stickman, Superhero" required>
               <label class="checkbox-field"><input name="mobileReady" type="checkbox" ${game.mobileReady !== false ? "checked" : ""}> Mobile Ready</label>
-              <label class="checkbox-field"><input name="strictIframe" type="checkbox" ${game.strictIframe !== false ? "checked" : ""}> Strict iframe mode</label>
-              <p class="field-hint">Blocks popups, top-page redirects, and game-requested fullscreen. Turn off only if a trusted game will not run.</p>
+              <label>Iframe sandbox controls</label>
+              <div class="permission-grid">
+                <label class="checkbox-field"><input name="allowIframeAutoRedirect" type="checkbox" ${iframePermissions.allowAutoRedirect ? "checked" : ""}> Allow automatic redirect to game site</label>
+                <label class="checkbox-field"><input name="allowIframePopups" type="checkbox" ${iframePermissions.allowPopups ? "checked" : ""}> Allow popup windows</label>
+                <label class="checkbox-field"><input name="allowIframeFullscreen" type="checkbox" ${iframePermissions.allowFullscreen ? "checked" : ""}> Allow forced fullscreen</label>
+                <label class="checkbox-field"><input name="allowIframeClickRedirect" type="checkbox" ${iframePermissions.allowClickRedirect ? "checked" : ""}> Allow click to move whole page</label>
+              </div>
+              <p class="field-hint">Popup windows stay enabled by default because some providers need them to start. Top-page redirects and fullscreen remain blocked unless you allow them.</p>
             </div>
           </div>
           <div class="form-grid two">
@@ -2711,9 +2745,29 @@
 
   function normalizeURLCandidate(value) {
     const text = String(value || "").trim();
-    if (/^https?:\/\//i.test(text)) return text;
-    if (/^\/\//.test(text)) return `https:${text}`;
+    if (/^https?:\/\//i.test(text)) return normalizeProviderIframeUrl(text);
+    if (/^\/\//.test(text)) return normalizeProviderIframeUrl(`https:${text}`);
     return "";
+  }
+
+  function normalizeProviderIframeUrl(value) {
+    const text = String(value || "").trim();
+    if (!text) return "";
+
+    try {
+      const url = new URL(text);
+      const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+      const pathParts = url.pathname.split("/").filter(Boolean);
+
+      if (hostname === "play.famobi.com" && pathParts.length === 1) {
+        url.pathname = `/${pathParts[0]}/A-FAMOBI-COM`;
+        return url.toString();
+      }
+    } catch (error) {
+      return text;
+    }
+
+    return text;
   }
 
   function extractIframeAttribute(markup, attribute) {
@@ -2921,7 +2975,7 @@
         iframeUrl: row.iframeUrl,
         aspectRatio: row.aspectRatio,
         mobileReady: true,
-        strictIframe: true,
+        iframePermissions: { ...DEFAULT_IFRAME_PERMISSIONS },
         categories: categorySlugs,
         tags: row.tags,
         description: row.description,
@@ -3125,7 +3179,7 @@
     const description = String(data.get("description") || "").trim();
     const coverImage = String(data.get("coverImageUrl") || data.get("coverImageData") || "").trim();
     const categories = Array.from(form.elements.categories.selectedOptions).map((option) => option.value);
-    const strictIframe = Boolean(data.get("strictIframe"));
+    const iframePermissions = readIframePermissions(data);
 
     if (!title || !oneLine || !tags.length || !description || !categories.length) {
       toast("Please complete the required game fields.");
@@ -3148,7 +3202,8 @@
       game.iframeUrl = iframeUrl;
       game.aspectRatio = aspectRatio;
       game.mobileReady = Boolean(data.get("mobileReady"));
-      game.strictIframe = strictIframe;
+      game.iframePermissions = iframePermissions;
+      delete game.strictIframe;
       game.categories = categories;
       game.tags = tags;
       game.description = description;
@@ -3168,7 +3223,7 @@
       iframeUrl,
       aspectRatio,
       mobileReady: Boolean(data.get("mobileReady")),
-      strictIframe,
+      iframePermissions,
       categories,
       tags,
       description,
@@ -3719,10 +3774,63 @@
 
   function iframePolicyAttributes(game) {
     const referrer = 'referrerpolicy="no-referrer-when-downgrade"';
-    if (game?.strictIframe === false) {
-      return `allow="fullscreen; autoplay; gamepad; clipboard-read; clipboard-write" allowfullscreen ${referrer}`;
+    const permissions = normalizeIframePermissions(game);
+    const sandboxTokens = ["allow-scripts", "allow-same-origin", "allow-pointer-lock", "allow-forms"];
+    const allowTokens = ["autoplay", "gamepad", "clipboard-read", "clipboard-write"];
+
+    if (permissions.allowAutoRedirect) {
+      sandboxTokens.push("allow-top-navigation");
+    } else if (permissions.allowClickRedirect) {
+      sandboxTokens.push("allow-top-navigation-by-user-activation");
     }
-    return `sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms" allow="autoplay; gamepad; clipboard-read; clipboard-write" ${referrer}`;
+
+    if (permissions.allowPopups) {
+      sandboxTokens.push("allow-popups");
+    }
+
+    if (permissions.allowFullscreen) {
+      allowTokens.unshift("fullscreen");
+    }
+
+    const fullscreenAttr = permissions.allowFullscreen ? " allowfullscreen" : "";
+    return `sandbox="${sandboxTokens.join(" ")}" allow="${allowTokens.join("; ")}"${fullscreenAttr} ${referrer}`;
+  }
+
+  function normalizeGameRecord(game) {
+    if (!game || typeof game !== "object") return;
+    delete game.size;
+    if (game.iframeUrl) {
+      game.iframeUrl = normalizeProviderIframeUrl(game.iframeUrl);
+    }
+    game.iframePermissions = normalizeIframePermissions(game);
+    delete game.strictIframe;
+  }
+
+  function normalizeIframePermissions(game) {
+    const legacyAllowsEverything = game?.strictIframe === false;
+    const fallbackPermissions = legacyAllowsEverything
+      ? {
+          allowAutoRedirect: true,
+          allowPopups: true,
+          allowFullscreen: true,
+          allowClickRedirect: true
+        }
+      : DEFAULT_IFRAME_PERMISSIONS;
+    return {
+      allowAutoRedirect: Boolean(game?.iframePermissions?.allowAutoRedirect ?? fallbackPermissions.allowAutoRedirect),
+      allowPopups: Boolean(game?.iframePermissions?.allowPopups ?? fallbackPermissions.allowPopups),
+      allowFullscreen: Boolean(game?.iframePermissions?.allowFullscreen ?? fallbackPermissions.allowFullscreen),
+      allowClickRedirect: Boolean(game?.iframePermissions?.allowClickRedirect ?? fallbackPermissions.allowClickRedirect)
+    };
+  }
+
+  function readIframePermissions(data) {
+    return {
+      allowAutoRedirect: Boolean(data.get("allowIframeAutoRedirect")),
+      allowPopups: Boolean(data.get("allowIframePopups")),
+      allowFullscreen: Boolean(data.get("allowIframeFullscreen")),
+      allowClickRedirect: Boolean(data.get("allowIframeClickRedirect"))
+    };
   }
 
   function colorPairFromString(value) {

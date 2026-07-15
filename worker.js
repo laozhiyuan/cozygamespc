@@ -1,5 +1,11 @@
 const STATE_KEY = "main";
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+const DEFAULT_IFRAME_PERMISSIONS = {
+  allowAutoRedirect: false,
+  allowPopups: true,
+  allowFullscreen: false,
+  allowClickRedirect: false
+};
 
 const fallbackSiteSettings = {
   title: "Cozy Games PC - Free Online Browser Games | CozyGamesPC",
@@ -329,8 +335,8 @@ function normalizeState(source) {
     next.site.description = fallbackSiteSettings.description;
   }
 
-  next.games.forEach((game) => delete game.size);
-  next.deletedGames.forEach((game) => delete game.size);
+  next.games.forEach(normalizeGameRecord);
+  next.deletedGames.forEach(normalizeGameRecord);
 
   fallbackCategories.forEach((category) => {
     if (!next.categories.some((item) => item.slug === category.slug)) {
@@ -343,6 +349,54 @@ function normalizeState(source) {
   }
 
   return clone(next);
+}
+
+function normalizeGameRecord(game) {
+  if (!game || typeof game !== "object") return;
+  delete game.size;
+  if (game.iframeUrl) {
+    game.iframeUrl = normalizeProviderIframeUrl(game.iframeUrl);
+  }
+  game.iframePermissions = normalizeIframePermissions(game);
+  delete game.strictIframe;
+}
+
+function normalizeProviderIframeUrl(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+
+  try {
+    const url = new URL(text);
+    const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+    const pathParts = url.pathname.split("/").filter(Boolean);
+
+    if (hostname === "play.famobi.com" && pathParts.length === 1) {
+      url.pathname = `/${pathParts[0]}/A-FAMOBI-COM`;
+      return url.toString();
+    }
+  } catch (error) {
+    return text;
+  }
+
+  return text;
+}
+
+function normalizeIframePermissions(game) {
+  const legacyAllowsEverything = game?.strictIframe === false;
+  const fallbackPermissions = legacyAllowsEverything
+    ? {
+        allowAutoRedirect: true,
+        allowPopups: true,
+        allowFullscreen: true,
+        allowClickRedirect: true
+      }
+    : DEFAULT_IFRAME_PERMISSIONS;
+  return {
+    allowAutoRedirect: Boolean(game?.iframePermissions?.allowAutoRedirect ?? fallbackPermissions.allowAutoRedirect),
+    allowPopups: Boolean(game?.iframePermissions?.allowPopups ?? fallbackPermissions.allowPopups),
+    allowFullscreen: Boolean(game?.iframePermissions?.allowFullscreen ?? fallbackPermissions.allowFullscreen),
+    allowClickRedirect: Boolean(game?.iframePermissions?.allowClickRedirect ?? fallbackPermissions.allowClickRedirect)
+  };
 }
 
 function publicState(state) {
