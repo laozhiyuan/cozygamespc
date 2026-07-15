@@ -3,6 +3,7 @@ const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const DEFAULT_IFRAME_PERMISSIONS = {
   allowAutoRedirect: false,
   allowPopups: true,
+  allowPopupEscape: false,
   allowFullscreen: false,
   allowClickRedirect: false
 };
@@ -387,6 +388,7 @@ function normalizeIframePermissions(game) {
     ? {
         allowAutoRedirect: true,
         allowPopups: true,
+        allowPopupEscape: true,
         allowFullscreen: true,
         allowClickRedirect: true
       }
@@ -394,6 +396,7 @@ function normalizeIframePermissions(game) {
   return {
     allowAutoRedirect: Boolean(game?.iframePermissions?.allowAutoRedirect ?? fallbackPermissions.allowAutoRedirect),
     allowPopups: Boolean(game?.iframePermissions?.allowPopups ?? fallbackPermissions.allowPopups),
+    allowPopupEscape: Boolean(game?.iframePermissions?.allowPopupEscape ?? fallbackPermissions.allowPopupEscape),
     allowFullscreen: Boolean(game?.iframePermissions?.allowFullscreen ?? fallbackPermissions.allowFullscreen),
     allowClickRedirect: Boolean(game?.iframePermissions?.allowClickRedirect ?? fallbackPermissions.allowClickRedirect)
   };

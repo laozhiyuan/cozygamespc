@@ -15,6 +15,7 @@
   const DEFAULT_IFRAME_PERMISSIONS = {
     allowAutoRedirect: false,
     allowPopups: true,
+    allowPopupEscape: false,
     allowFullscreen: false,
     allowClickRedirect: false
   };
@@ -1692,10 +1693,11 @@
               <div class="permission-grid">
                 <label class="checkbox-field"><input name="allowIframeAutoRedirect" type="checkbox" ${iframePermissions.allowAutoRedirect ? "checked" : ""}> Allow automatic redirect to game site</label>
                 <label class="checkbox-field"><input name="allowIframePopups" type="checkbox" ${iframePermissions.allowPopups ? "checked" : ""}> Allow popup windows</label>
+                <label class="checkbox-field"><input name="allowIframePopupEscape" type="checkbox" ${iframePermissions.allowPopupEscape ? "checked" : ""}> Allow popup escape sandbox</label>
                 <label class="checkbox-field"><input name="allowIframeFullscreen" type="checkbox" ${iframePermissions.allowFullscreen ? "checked" : ""}> Allow forced fullscreen</label>
                 <label class="checkbox-field"><input name="allowIframeClickRedirect" type="checkbox" ${iframePermissions.allowClickRedirect ? "checked" : ""}> Allow click to move whole page</label>
               </div>
-              <p class="field-hint">Popup windows stay enabled by default because some providers need them to start. Top-page redirects and fullscreen remain blocked unless you allow them.</p>
+              <p class="field-hint">Popup windows stay enabled by default. Use popup escape only for trusted providers, because it lets popup windows leave the iframe sandbox.</p>
             </div>
           </div>
           <div class="form-grid two">
@@ -3786,6 +3788,9 @@
 
     if (permissions.allowPopups) {
       sandboxTokens.push("allow-popups");
+      if (permissions.allowPopupEscape) {
+        sandboxTokens.push("allow-popups-to-escape-sandbox");
+      }
     }
 
     if (permissions.allowFullscreen) {
@@ -3812,6 +3817,7 @@
       ? {
           allowAutoRedirect: true,
           allowPopups: true,
+          allowPopupEscape: true,
           allowFullscreen: true,
           allowClickRedirect: true
         }
@@ -3819,6 +3825,7 @@
     return {
       allowAutoRedirect: Boolean(game?.iframePermissions?.allowAutoRedirect ?? fallbackPermissions.allowAutoRedirect),
       allowPopups: Boolean(game?.iframePermissions?.allowPopups ?? fallbackPermissions.allowPopups),
+      allowPopupEscape: Boolean(game?.iframePermissions?.allowPopupEscape ?? fallbackPermissions.allowPopupEscape),
       allowFullscreen: Boolean(game?.iframePermissions?.allowFullscreen ?? fallbackPermissions.allowFullscreen),
       allowClickRedirect: Boolean(game?.iframePermissions?.allowClickRedirect ?? fallbackPermissions.allowClickRedirect)
     };
@@ -3828,6 +3835,7 @@
     return {
       allowAutoRedirect: Boolean(data.get("allowIframeAutoRedirect")),
       allowPopups: Boolean(data.get("allowIframePopups")),
+      allowPopupEscape: Boolean(data.get("allowIframePopupEscape")),
       allowFullscreen: Boolean(data.get("allowIframeFullscreen")),
       allowClickRedirect: Boolean(data.get("allowIframeClickRedirect"))
     };
