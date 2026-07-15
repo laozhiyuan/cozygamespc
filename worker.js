@@ -359,6 +359,10 @@ function normalizeGameRecord(game) {
     game.iframeUrl = normalizeProviderIframeUrl(game.iframeUrl);
   }
   game.iframePermissions = normalizeIframePermissions(game);
+  if (isFamobiIframeUrl(game.iframeUrl)) {
+    game.iframePermissions.allowPopups = true;
+    game.iframePermissions.allowPopupEscape = true;
+  }
   delete game.strictIframe;
 }
 
@@ -380,6 +384,15 @@ function normalizeProviderIframeUrl(value) {
   }
 
   return text;
+}
+
+function isFamobiIframeUrl(value) {
+  try {
+    const url = new URL(String(value || "").trim());
+    return url.hostname.toLowerCase().replace(/^www\./, "") === "play.famobi.com";
+  } catch (error) {
+    return false;
+  }
 }
 
 function normalizeIframePermissions(game) {

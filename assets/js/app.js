@@ -2772,6 +2772,15 @@
     return text;
   }
 
+  function isFamobiIframeUrl(value) {
+    try {
+      const url = new URL(String(value || "").trim());
+      return url.hostname.toLowerCase().replace(/^www\./, "") === "play.famobi.com";
+    } catch (error) {
+      return false;
+    }
+  }
+
   function extractIframeAttribute(markup, attribute) {
     const pattern = new RegExp(`(?:^|[\\s<])${escapeRegExp(attribute)}\\s*=\\s*(?:"([^"]+)"|'([^']+)'|([^\\s>]+))`, "i");
     const match = String(markup || "").match(pattern);
@@ -3775,7 +3784,9 @@
   }
 
   function iframePolicyAttributes(game) {
-    const referrer = 'referrerpolicy="no-referrer-when-downgrade"';
+    const iframeUrl = normalizeProviderIframeUrl(game?.iframeUrl || "");
+    const isFamobi = isFamobiIframeUrl(iframeUrl);
+    const referrer = `referrerpolicy="${isFamobi ? "no-referrer" : "no-referrer-when-downgrade"}"`;
     const permissions = normalizeIframePermissions(game);
     const sandboxTokens = ["allow-scripts", "allow-same-origin", "allow-pointer-lock", "allow-forms"];
     const allowTokens = ["autoplay", "gamepad", "clipboard-read", "clipboard-write"];
@@ -3786,9 +3797,9 @@
       sandboxTokens.push("allow-top-navigation-by-user-activation");
     }
 
-    if (permissions.allowPopups) {
+    if (permissions.allowPopups || isFamobi) {
       sandboxTokens.push("allow-popups");
-      if (permissions.allowPopupEscape) {
+      if (permissions.allowPopupEscape || isFamobi) {
         sandboxTokens.push("allow-popups-to-escape-sandbox");
       }
     }
@@ -3808,6 +3819,10 @@
       game.iframeUrl = normalizeProviderIframeUrl(game.iframeUrl);
     }
     game.iframePermissions = normalizeIframePermissions(game);
+    if (isFamobiIframeUrl(game.iframeUrl)) {
+      game.iframePermissions.allowPopups = true;
+      game.iframePermissions.allowPopupEscape = true;
+    }
     delete game.strictIframe;
   }
 
