@@ -8,8 +8,10 @@
   const RECENT_KEY = "cozygamespc:recent:v1";
   const FIRST_GAME_IFRAME = "https://html5.gamemonetize.games/ztnooa2wmbczll7r6hd4kj6vyym4z6x6/";
   const DEFAULT_OG_ASSET = "assets/img/cozygamespc-og.png";
+  const HOME_INTRO_IMAGE_ASSET = "assets/img/cozygamespc-og.webp";
   const DEFAULT_OG_IMAGE = `${SITE_URL}/${DEFAULT_OG_ASSET}`;
   const DEFAULT_GAME_ASPECT_RATIO = "1024 / 512";
+  const SHEETJS_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
   const IS_FILE_PREVIEW = window.location.protocol === "file:";
   const FILE_BASE_PATH = IS_FILE_PREVIEW ? decodeURIComponent(window.location.pathname.replace(/\/[^/]*$/, "/")) : "/";
   const API_ENABLED = !IS_FILE_PREVIEW;
@@ -361,6 +363,7 @@
   let cloudSyncActive = false;
   let remoteSaveTimer = 0;
   let lastRemoteSaveError = "";
+  let sheetJSPromise = null;
 
   const app = document.getElementById("app");
   const searchWrap = document.getElementById("searchWrap");
@@ -911,7 +914,7 @@
             ranked by player clicks. Each game page includes a clear description, categories, tags, and an iframe play area.
           </p>
         </div>
-        <img class="home-intro-image" src="${escapeAttr(assetPath(DEFAULT_OG_ASSET))}" alt="Cozy Games PC free online browser games preview" width="1200" height="630" loading="eager">
+        <img class="home-intro-image" src="${escapeAttr(assetPath(HOME_INTRO_IMAGE_ASSET))}" alt="Cozy Games PC free online browser games preview" width="1213" height="600" loading="eager" fetchpriority="high" decoding="async">
       </section>
     `;
   }
@@ -1296,7 +1299,7 @@
               </div>
               ${
                 game.iframeUrl
-                  ? `<div class="iframe-wrap" id="gameFrameWrap" style="--game-aspect-ratio:${escapeAttr(gameAspectRatio(game))}"><iframe src="${escapeAttr(game.iframeUrl)}" title="${escapeAttr(game.title)} online game iframe" loading="lazy" allow="fullscreen; autoplay; gamepad; clipboard-read; clipboard-write" allowfullscreen></iframe></div>`
+                  ? `<div class="iframe-wrap" id="gameFrameWrap" style="--game-aspect-ratio:${escapeAttr(gameAspectRatio(game))}"><iframe src="${escapeAttr(game.iframeUrl)}" title="${escapeAttr(game.title)} online game iframe" loading="eager" ${iframePolicyAttributes(game)}></iframe></div>`
                   : `<div class="iframe-placeholder"><div><h2>Iframe coming soon</h2><p>This sample game page is ready for your iframe URL. Add one in the admin dashboard when the game is live.</p></div></div>`
               }
             </section>
@@ -1612,6 +1615,7 @@
       oneLine: "",
       iframeUrl: "",
       mobileReady: true,
+      strictIframe: true,
       categories: [],
       tags: [],
       description: "",
@@ -1656,6 +1660,8 @@
               <label for="gameTags">Tags</label>
               <input id="gameTags" name="tags" type="text" value="${escapeAttr((game.tags || []).join(", "))}" placeholder="Arena, Fighting, Stickman, Superhero" required>
               <label class="checkbox-field"><input name="mobileReady" type="checkbox" ${game.mobileReady !== false ? "checked" : ""}> Mobile Ready</label>
+              <label class="checkbox-field"><input name="strictIframe" type="checkbox" ${game.strictIframe !== false ? "checked" : ""}> Strict iframe mode</label>
+              <p class="field-hint">Blocks popups, top-page redirects, and game-requested fullscreen. Turn off only if a trusted game will not run.</p>
             </div>
           </div>
           <div class="form-grid two">
@@ -2034,7 +2040,7 @@
 
   function posterContent(game) {
     if (game.coverImage) {
-      return `<img class="poster-image" src="${escapeAttr(displayImageSrc(game.coverImage))}" alt="${escapeAttr(game.title)} cover">`;
+      return `<img class="poster-image" src="${escapeAttr(displayImageSrc(game.coverImage))}" alt="${escapeAttr(game.title)} cover" loading="lazy" decoding="async">`;
     }
     return `<span class="poster-initials">${escapeHTML(getInitials(game))}</span>`;
   }
@@ -2477,9 +2483,7 @@
     }
 
     if (extension === "xlsx" || extension === "xls" || extension === "exl") {
-      if (!window.XLSX) {
-        throw new Error("Excel reading library is not loaded. Please use CSV, or check your internet connection and reload this page.");
-      }
+      await ensureSheetJS();
       const buffer = await readFileAsArrayBuffer(file);
       const workbook = window.XLSX.read(buffer, { type: "array" });
       const sheetName = workbook.SheetNames[0];
@@ -2488,6 +2492,40 @@
     }
 
     throw new Error("Please upload a CSV, TSV, XLSX, XLS, or EXL file.");
+  }
+
+  async function ensureSheetJS() {
+    if (window.XLSX) return;
+    if (!sheetJSPromise) {
+      sheetJSPromise = loadScript(SHEETJS_URL);
+    }
+    try {
+      await sheetJSPromise;
+    } catch (error) {
+      sheetJSPromise = null;
+      throw new Error("Excel reading library could not load. Please use CSV, or check your internet connection and try again.");
+    }
+    if (!window.XLSX) {
+      throw new Error("Excel reading library could not start. Please use CSV or try again.");
+    }
+  }
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[src="${src}"]`);
+      if (existing) {
+        existing.addEventListener("load", resolve, { once: true });
+        existing.addEventListener("error", reject, { once: true });
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = src;
+      script.async = true;
+      script.crossOrigin = "anonymous";
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
   }
 
   function rowsFromDelimitedText(text, forcedDelimiter) {
@@ -2883,6 +2921,7 @@
         iframeUrl: row.iframeUrl,
         aspectRatio: row.aspectRatio,
         mobileReady: true,
+        strictIframe: true,
         categories: categorySlugs,
         tags: row.tags,
         description: row.description,
@@ -3086,6 +3125,7 @@
     const description = String(data.get("description") || "").trim();
     const coverImage = String(data.get("coverImageUrl") || data.get("coverImageData") || "").trim();
     const categories = Array.from(form.elements.categories.selectedOptions).map((option) => option.value);
+    const strictIframe = Boolean(data.get("strictIframe"));
 
     if (!title || !oneLine || !tags.length || !description || !categories.length) {
       toast("Please complete the required game fields.");
@@ -3108,6 +3148,7 @@
       game.iframeUrl = iframeUrl;
       game.aspectRatio = aspectRatio;
       game.mobileReady = Boolean(data.get("mobileReady"));
+      game.strictIframe = strictIframe;
       game.categories = categories;
       game.tags = tags;
       game.description = description;
@@ -3127,6 +3168,7 @@
       iframeUrl,
       aspectRatio,
       mobileReady: Boolean(data.get("mobileReady")),
+      strictIframe,
       categories,
       tags,
       description,
@@ -3673,6 +3715,14 @@
 
   function gameAspectRatio(game) {
     return normalizeAspectRatioInput(game?.aspectRatio || "") || DEFAULT_GAME_ASPECT_RATIO;
+  }
+
+  function iframePolicyAttributes(game) {
+    const referrer = 'referrerpolicy="no-referrer-when-downgrade"';
+    if (game?.strictIframe === false) {
+      return `allow="fullscreen; autoplay; gamepad; clipboard-read; clipboard-write" allowfullscreen ${referrer}`;
+    }
+    return `sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms" allow="autoplay; gamepad; clipboard-read; clipboard-write" ${referrer}`;
   }
 
   function colorPairFromString(value) {
