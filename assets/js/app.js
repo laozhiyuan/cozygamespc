@@ -891,7 +891,8 @@
           title: "Recommended Cozy Games",
           description: "Popular browser games selected from click activity and player interest.",
           games: popular.slice(0, 10),
-          href: hrefFor("popular")
+          href: hrefFor("popular"),
+          hideHeader: true
         })}
 
         ${renderCategorySection()}
@@ -1975,13 +1976,17 @@
 
     return `
       <section class="section-block">
-        <div class="section-header">
-          <div class="section-heading">
-            <h2>${escapeHTML(options.title)}</h2>
-            <p>${escapeHTML(options.description || "")}</p>
-          </div>
-          ${options.href ? `<a class="text-button" href="${escapeAttr(options.href)}">Show all ${icon("arrow-right")}</a>` : ""}
-        </div>
+        ${
+          options.hideHeader
+            ? ""
+            : `<div class="section-header">
+                <div class="section-heading">
+                  <h2>${escapeHTML(options.title)}</h2>
+                  <p>${escapeHTML(options.description || "")}</p>
+                </div>
+                ${options.href ? `<a class="text-button" href="${escapeAttr(options.href)}">Show all ${icon("arrow-right")}</a>` : ""}
+              </div>`
+        }
         ${body}
       </section>
     `;
@@ -2009,12 +2014,6 @@
     if (!state.categories.length) return "";
     return `
       <section class="section-block">
-        <div class="section-header">
-          <div class="section-heading">
-            <h2>Game Categories</h2>
-            <p>Category names and icons come from the admin dashboard.</p>
-          </div>
-        </div>
         <div class="category-grid">
           ${state.categories.map((category) => categoryCard(category)).join("")}
         </div>
