@@ -888,16 +888,6 @@
         })}
 
         ${renderGameSection({
-          title: "Recommended Cozy Games",
-          description: "Popular browser games selected from click activity and player interest.",
-          games: popular.slice(0, 10),
-          href: hrefFor("popular"),
-          hideHeader: true
-        })}
-
-        ${renderCategorySection()}
-
-        ${renderGameSection({
           title: "New Browser Games",
           description: "Freshly published online games on CozyGamesPC.",
           games: latest.slice(0, 10),
